@@ -46,9 +46,15 @@ class DatabaseManager:
         return self._db
 
     async def close(self) -> None:
-        """Close the database connection."""
+        """Close the database connection gracefully."""
         if self._db is not None:
-            await self._db.close()
+            try:
+                await self._db.close()
+            except Exception:
+                # aiosqlite can raise if the event loop is closing --
+                # the connection thread races against loop shutdown.
+                # This is harmless: SQLite handles unclean disconnects safely.
+                pass
             self._db = None
 
     async def backup(self, dest: Path) -> None:

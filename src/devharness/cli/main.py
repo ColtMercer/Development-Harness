@@ -27,9 +27,12 @@ from devharness.core.config import load_config
 @click.group()
 @click.option("--storage-dir", type=click.Path(), help="Storage directory path")
 @click.option("--log-level", type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR"]))
+@click.option("--verbose", "-v", is_flag=True, help="Show harness internal logs")
 @click.pass_context
-def cli(ctx: click.Context, storage_dir: str | None, log_level: str | None) -> None:
+def cli(ctx: click.Context, storage_dir: str | None, log_level: str | None, verbose: bool) -> None:
     """Development Harness - Control plane for coding agents."""
+    import logging
+
     ctx.ensure_object(dict)
     config = load_config()
     if storage_dir:
@@ -37,6 +40,12 @@ def cli(ctx: click.Context, storage_dir: str | None, log_level: str | None) -> N
         config.storage_dir = Path(storage_dir)
     if log_level:
         config.log_level = log_level
+
+    # Suppress internal harness logs for CLI commands unless --verbose.
+    # The structured JSON log lines are useful for debugging but noisy for normal use.
+    if not verbose:
+        logging.getLogger("devharness").setLevel(logging.WARNING)
+
     ctx.obj["config"] = config
 
 
@@ -55,27 +64,31 @@ def serve(ctx: click.Context, host: str | None, port: int | None) -> None:
         config.server_port = port
 
     async def _serve() -> None:
-        from devharness.bootstrap import bootstrap
+        from devharness.bootstrap import bootstrap, shutdown
 
         runtime = await bootstrap(config)
         click.echo(f"Harness server starting on http://{config.server_host}:{config.server_port}")
 
         try:
             from devharness.app_server.http_server import create_app
-
-            app = create_app(runtime, config)
             import uvicorn
-
-            server_config = uvicorn.Config(
-                app,
-                host=config.server_host,
-                port=config.server_port,
-                log_level=config.log_level.lower(),
-            )
-            server = uvicorn.Server(server_config)
-            await server.serve()
         except ImportError:
             click.echo("Server dependencies not installed. Run: pip install devharness[server]")
+            await shutdown(runtime)
+            return
+
+        app = create_app(runtime, config)
+        server_config = uvicorn.Config(
+            app,
+            host=config.server_host,
+            port=config.server_port,
+            log_level=config.log_level.lower(),
+        )
+        server = uvicorn.Server(server_config)
+        try:
+            await server.serve()
+        finally:
+            await shutdown(runtime)
 
     anyio.run(_serve)
 
