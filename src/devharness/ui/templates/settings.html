@@ -4,82 +4,192 @@
 {% block content %}
 <h1>Settings</h1>
 
-<p>All configuration is stored in the database. No config files needed.</p>
-
-{% if saved is defined %}
-<article>
-    <p>Settings saved successfully.</p>
+{% if saved %}
+<article style="background: var(--pico-ins-color); padding: 0.75rem 1rem; margin-bottom: 1rem;">
+    Saved: {{ saved | join(', ') }}
 </article>
 {% endif %}
 
+<form action="/settings" method="post">
+
+<!-- ─── Agent Defaults ─────────────────────────────────────── -->
+<h2>Agent Defaults</h2>
+
+<div class="grid">
+    <label>
+        Default Agent Backend
+        <select name="default.agent_backend">
+            {% for val in ["claude-code", "codex"] %}
+            <option value="{{ val }}" {% if config.default_agent_backend == val %}selected{% endif %}>{{ val }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>
+        Default Approval Mode
+        <select name="default.approval_mode">
+            {% for val, desc in [
+                ("full_trust", "Full Trust — everything auto-approved"),
+                ("auto_approve_safe", "Auto Approve Safe — reads auto, writes need approval"),
+                ("workspace_write", "Workspace Write — reads+writes auto, execute needs approval"),
+                ("approval_required", "Approval Required — everything needs approval"),
+                ("read_only", "Read Only — writes and executes denied"),
+            ] %}
+            <option value="{{ val }}" {% if config.default_approval_mode == val %}selected{% endif %}>{{ desc }}</option>
+            {% endfor %}
+        </select>
+    </label>
+</div>
+
+<label>
+    Log Level
+    <select name="log.level">
+        {% for val in ["DEBUG", "INFO", "WARNING", "ERROR"] %}
+        <option value="{{ val }}" {% if config.log_level == val %}selected{% endif %}>{{ val }}</option>
+        {% endfor %}
+    </select>
+</label>
+
+<!-- ─── Server ─────────────────────────────────────────────── -->
+<h2>Server</h2>
+
+<div class="grid">
+    <label>
+        Host
+        <input type="text" name="server.host" value="{{ config.server_host }}" placeholder="127.0.0.1">
+    </label>
+    <label>
+        Port
+        <input type="number" name="server.port" value="{{ config.server_port }}" placeholder="8390">
+    </label>
+</div>
+
+<!-- ─── Credentials ────────────────────────────────────────── -->
 <h2>Credentials</h2>
-<p>API keys and tokens are stored securely in the database (never in source code).</p>
+<p><small>Stored securely in the database. Leave blank to keep existing value.</small></p>
 
-<form action="/settings/credentials" method="post">
-    <div class="grid">
-        <div>
-            <label for="cred_key">Credential</label>
-            <select id="cred_key" name="cred_key">
-                <option value="anthropic.api_key">Anthropic API Key (Claude Code)</option>
-                <option value="openai.api_key">OpenAI API Key (Codex)</option>
-                <option value="neo4j.password">Neo4j Password</option>
-                <option value="slack.app_token">Slack App Token</option>
-                <option value="slack.bot_token">Slack Bot Token</option>
-            </select>
-        </div>
-        <div>
-            <label for="cred_value">Value</label>
-            <input type="password" id="cred_value" name="value" placeholder="sk-..." required>
-        </div>
-    </div>
-    <button type="submit">Save Credential</button>
+<div class="grid">
+    <label>
+        Anthropic API Key
+        {% if cred_status.get("anthropic.api_key") %}
+        <input type="password" name="anthropic.api_key" placeholder="••••••••  (set)" value="">
+        {% else %}
+        <input type="password" name="anthropic.api_key" placeholder="sk-ant-..." value="">
+        {% endif %}
+        <small>{% if cred_status.get("anthropic.api_key") %}Configured{% else %}Not set{% endif %}</small>
+    </label>
+    <label>
+        OpenAI API Key
+        {% if cred_status.get("openai.api_key") %}
+        <input type="password" name="openai.api_key" placeholder="••••••••  (set)" value="">
+        {% else %}
+        <input type="password" name="openai.api_key" placeholder="sk-..." value="">
+        {% endif %}
+        <small>{% if cred_status.get("openai.api_key") %}Configured{% else %}Not set{% endif %}</small>
+    </label>
+</div>
+
+<div class="grid">
+    <label>
+        Slack App Token
+        {% if cred_status.get("slack.app_token") %}
+        <input type="password" name="slack.app_token" placeholder="••••••••  (set)" value="">
+        {% else %}
+        <input type="password" name="slack.app_token" placeholder="xapp-..." value="">
+        {% endif %}
+        <small>{% if cred_status.get("slack.app_token") %}Configured{% else %}Not set{% endif %}</small>
+    </label>
+    <label>
+        Slack Bot Token
+        {% if cred_status.get("slack.bot_token") %}
+        <input type="password" name="slack.bot_token" placeholder="••••••••  (set)" value="">
+        {% else %}
+        <input type="password" name="slack.bot_token" placeholder="xoxb-..." value="">
+        {% endif %}
+        <small>{% if cred_status.get("slack.bot_token") %}Configured{% else %}Not set{% endif %}</small>
+    </label>
+</div>
+
+<!-- ─── Memory ─────────────────────────────────────────────── -->
+<h2>Memory</h2>
+
+<div class="grid">
+    <label>
+        Memory Backend
+        <select name="default.memory_backend">
+            {% for val, desc in [
+                ("none", "None — no persistent memory"),
+                ("obsidian", "Obsidian — Markdown vault (zero infrastructure)"),
+                ("neo4j", "Neo4j — graph database (requires Neo4j instance)"),
+            ] %}
+            <option value="{{ val }}" {% if config.default_memory_backend == val %}selected{% endif %}>{{ desc }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>
+        Embedding Model
+        <input type="text" name="embedding.model" value="{{ config.embedding_model }}" placeholder="text-embedding-3-small">
+    </label>
+</div>
+
+<div class="grid">
+    <label>
+        Neo4j URI
+        <input type="text" name="neo4j.uri" value="{{ config.neo4j_uri }}" placeholder="bolt://localhost:7687">
+    </label>
+    <label>
+        Neo4j Username
+        <input type="text" name="neo4j.username" value="{{ config.neo4j_username }}" placeholder="neo4j">
+    </label>
+</div>
+
+<div class="grid">
+    <label>
+        Neo4j Password
+        {% if cred_status.get("neo4j.password") %}
+        <input type="password" name="neo4j.password" placeholder="••••••••  (set)" value="">
+        {% else %}
+        <input type="password" name="neo4j.password" placeholder="password" value="">
+        {% endif %}
+        <small>{% if cred_status.get("neo4j.password") %}Configured{% else %}Not set{% endif %}</small>
+    </label>
+    <label>
+        Neo4j Enabled
+        <select name="neo4j.enabled">
+            <option value="false" {% if not config.neo4j_enabled %}selected{% endif %}>Disabled</option>
+            <option value="true" {% if config.neo4j_enabled %}selected{% endif %}>Enabled</option>
+        </select>
+    </label>
+</div>
+
+<label>
+    Obsidian Vault Path
+    <input type="text" name="obsidian.vault_path" value="{{ config.obsidian_vault_path }}" placeholder=".devharness/vault">
+</label>
+
+<!-- ─── Advanced ───────────────────────────────────────────── -->
+<details>
+    <summary>Advanced</summary>
+
+    <label>
+        Consolidation Schedule (cron)
+        <input type="text" name="consolidation.schedule" value="{{ config.consolidation_schedule }}" placeholder="0 3 * * *">
+        <small>Daily memory consolidation schedule. Default: 3 AM.</small>
+    </label>
+
+    <label>
+        Embedding Dimensions
+        <input type="number" name="embedding.dimensions" value="{{ config.embedding_dimensions }}" placeholder="1536">
+    </label>
+
+    <label>
+        Neo4j Database Name
+        <input type="text" name="neo4j.database" value="{{ config.neo4j_database }}" placeholder="harness">
+    </label>
+</details>
+
+<!-- ─── Save ───────────────────────────────────────────────── -->
+<button type="submit" style="margin-top: 1.5rem;">Save All Settings</button>
+
 </form>
-
-<h2>General Settings</h2>
-<p>Change any setting. The agent can also manage these via <code>harness config set</code>.</p>
-
-<form action="/settings/general" method="post">
-    <div class="grid">
-        <div>
-            <label for="setting_key">Setting</label>
-            <select id="setting_key" name="key">
-                <option value="server.host">Server Host</option>
-                <option value="server.port">Server Port</option>
-                <option value="default.approval_mode">Default Approval Mode</option>
-                <option value="default.agent_backend">Default Agent Backend</option>
-                <option value="default.memory_backend">Memory Backend</option>
-                <option value="log.level">Log Level</option>
-                <option value="neo4j.uri">Neo4j URI</option>
-                <option value="neo4j.enabled">Neo4j Enabled</option>
-                <option value="embedding.model">Embedding Model</option>
-            </select>
-        </div>
-        <div>
-            <label for="setting_value">Value</label>
-            <input type="text" id="setting_value" name="value" required>
-        </div>
-    </div>
-    <button type="submit">Save Setting</button>
-</form>
-
-<h2>Current Configuration</h2>
-<table>
-    <thead><tr><th>Setting</th><th>Value</th></tr></thead>
-    <tbody>
-        <tr><td>Default Agent</td><td>{{ config.default_agent_backend }}</td></tr>
-        <tr><td>Default Approval Mode</td><td>{{ config.default_approval_mode }}</td></tr>
-        <tr><td>Memory Backend</td><td>{{ config.default_memory_backend }}</td></tr>
-        <tr><td>Server</td><td>{{ config.server_host }}:{{ config.server_port }}</td></tr>
-        <tr><td>Log Level</td><td>{{ config.log_level }}</td></tr>
-        <tr><td>Storage Dir</td><td>{{ config.storage_dir }}</td></tr>
-    </tbody>
-</table>
-
-<h2>CLI Reference</h2>
-<pre>
-harness config list                              # List all settings
-harness config set server.port 9000              # Change a setting
-harness config set-credential anthropic.api_key sk-...  # Store API key
-harness config get default.approval_mode         # Read a setting
-</pre>
 {% endblock %}

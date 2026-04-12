@@ -81,34 +81,51 @@ def create_ui_routes(runtime: Runtime, config: HarnessConfig) -> list:
         threads = await runtime.list_threads()
         return render("observe.html", threads=threads)
 
+    async def _load_credentials_status() -> dict[str, bool]:
+        """Check which credentials are set (without revealing values)."""
+        from devharness.core.config import CREDENTIAL_KEYS
+        status = {}
+        for key, meta in CREDENTIAL_KEYS.items():
+            val = await runtime._storage.load_credential(
+                None, meta["provider"], meta["key_name"]
+            )
+            status[key] = val is not None and len(val) > 0
+        return status
+
     async def settings_page(request: Request) -> Response:
-        return render("settings.html", config=config)
+        cred_status = await _load_credentials_status()
+        return render("settings.html", config=config, cred_status=cred_status)
 
-    async def settings_credentials(request: Request) -> Response:
-        if request.method == "POST":
-            form = await request.form()
-            cred_key = form.get("cred_key", "")
-            value = form.get("value", "")
-            if cred_key and value:
-                from devharness.core.config import save_config_to_db
-                try:
-                    await save_config_to_db(cred_key, value, runtime._storage)
-                except ValueError:
-                    pass
-        return render("settings.html", config=config, saved=True)
+    async def settings_save(request: Request) -> Response:
+        from devharness.core.config import CREDENTIAL_KEYS, SETTINGS_KEYS, save_config_to_db
 
-    async def settings_general(request: Request) -> Response:
-        if request.method == "POST":
-            form = await request.form()
-            key = form.get("key", "")
-            value = form.get("value", "")
-            if key and value:
-                from devharness.core.config import save_config_to_db
-                try:
-                    await save_config_to_db(key, value, runtime._storage)
-                except ValueError:
-                    pass
-        return render("settings.html", config=config, saved=True)
+        form = await request.form()
+        saved_keys = []
+
+        # Process all form fields
+        for key in list(SETTINGS_KEYS.keys()) + list(CREDENTIAL_KEYS.keys()):
+            value = form.get(key, "")
+            if not value:
+                continue
+            # For credentials, skip if the placeholder wasn't changed
+            if key in CREDENTIAL_KEYS and value.startswith("••••"):
+                continue
+            try:
+                await save_config_to_db(key, value, runtime._storage)
+                saved_keys.append(key)
+            except ValueError:
+                pass
+
+        # Reload config from DB to reflect changes
+        from devharness.core.config import load_config_from_db
+        nonlocal config
+        config = await load_config_from_db(config, runtime._storage)
+
+        cred_status = await _load_credentials_status()
+        return render(
+            "settings.html", config=config, cred_status=cred_status,
+            saved=saved_keys if saved_keys else None,
+        )
 
     routes = [
         Route("/", dashboard),
@@ -117,9 +134,8 @@ def create_ui_routes(runtime: Runtime, config: HarnessConfig) -> list:
         Route("/approvals/action", approve_action, methods=["POST"]),
         Route("/skills", skills_page),
         Route("/observe", observe_page),
-        Route("/settings", settings_page),
-        Route("/settings/credentials", settings_credentials, methods=["GET", "POST"]),
-        Route("/settings/general", settings_general, methods=["POST"]),
+        Route("/settings", settings_page, methods=["GET"]),
+        Route("/settings", settings_save, methods=["POST"]),
     ]
 
     if STATIC_DIR.exists():
