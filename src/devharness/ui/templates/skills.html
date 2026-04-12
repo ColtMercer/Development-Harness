@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+{% block title %}Skills - Development Harness{% endblock %}
+
+{% block content %}
+<h1>Skills</h1>
+
+{% if skills %}
+{% for skill in skills %}
+<article>
+    <header>{{ skill.name }} <small>v{{ skill.version }}</small></header>
+    <p>{{ skill.description }}</p>
+    {% if skill.tools %}
+    <p><strong>Tools:</strong> {{ skill.tools|join(', ') }}</p>
+    {% endif %}
+    {% if skill.verifiers %}
+    <p><strong>Verifiers:</strong> {{ skill.verifiers|join(', ') }}</p>
+    {% endif %}
+</article>
+{% endfor %}
+{% else %}
+<p>No skills loaded. Place skill directories in <code>skills/</code> or use built-in skills.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,13 @@
+name: test_fixer
+version: "0.1.0"
+description: Test fixing skill for diagnosing and repairing failing tests without changing production behaviour.
+tools:
+  - file_read
+  - file_write
+  - search
+  - shell
+  - test_runner
+  - diff_tool
+verifiers:
+  - test_verifier
+  - lint_verifier

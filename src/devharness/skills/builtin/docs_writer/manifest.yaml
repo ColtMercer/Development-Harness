@@ -1,0 +1,11 @@
+name: docs_writer
+version: "0.1.0"
+description: Documentation skill for writing and maintaining technical documentation, READMEs, and API references.
+tools:
+  - file_read
+  - file_write
+  - search
+  - git_status
+verifiers:
+  - file_existence_verifier
+  - schema_verifier

@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block title %}Approvals - Development Harness{% endblock %}
+
+{% block content %}
+<h1>Pending Approvals</h1>
+
+{% if pending_threads %}
+{% for thread in pending_threads %}
+<article>
+    <header>
+        Thread {{ thread.id[:8] }}... — {{ thread.pending_approval.tool_name }}
+    </header>
+    <p><strong>Category:</strong> {{ thread.pending_approval.category }}</p>
+    <p><strong>Reason:</strong> {{ thread.pending_approval.reason }}</p>
+    <details>
+        <summary>Arguments</summary>
+        <pre>{{ thread.pending_approval.arguments }}</pre>
+    </details>
+    <form action="/approvals/action" method="post" hx-post="/approvals/action" hx-target="main" hx-swap="innerHTML">
+        <input type="hidden" name="thread_id" value="{{ thread.id }}">
+        <input type="hidden" name="approval_id" value="{{ thread.pending_approval.id }}">
+        <div class="grid">
+            <button type="submit" name="action" value="approve">Approve</button>
+            <button type="submit" name="action" value="deny" class="secondary">Deny</button>
+        </div>
+    </form>
+</article>
+{% endfor %}
+{% else %}
+<p>No pending approvals.</p>
+{% endif %}
+{% endblock %}

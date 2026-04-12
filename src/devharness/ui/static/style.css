@@ -1,0 +1,59 @@
+/* Development Harness - minimal custom styles on top of Pico CSS */
+
+:root {
+    --harness-accent: #6366f1;
+}
+
+/* Status badges */
+mark.warning {
+    background-color: #f59e0b;
+    color: white;
+}
+
+mark.error {
+    background-color: #ef4444;
+    color: white;
+}
+
+mark.success {
+    background-color: #22c55e;
+    color: white;
+}
+
+/* Tighter spacing for tables */
+table td, table th {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+}
+
+/* Code blocks in thread view */
+pre {
+    max-height: 400px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+}
+
+/* Navigation highlight */
+nav a[aria-current="page"] {
+    font-weight: bold;
+}
+
+/* Small buttons */
+.small {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+/* Grid cards */
+article header {
+    font-weight: 600;
+}
+
+/* Footer */
+footer {
+    margin-top: 2rem;
+    padding: 1rem 0;
+    border-top: 1px solid var(--pico-muted-border-color);
+    text-align: center;
+    color: var(--pico-muted-color);
+}

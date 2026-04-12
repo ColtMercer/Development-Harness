@@ -1,0 +1,13 @@
+name: coding_reviewer
+version: "0.1.0"
+description: Code review skill for analyzing diffs, identifying issues, and suggesting improvements.
+tools:
+  - file_read
+  - search
+  - git_status
+  - diff_tool
+  - test_runner
+  - lint_runner
+verifiers:
+  - lint_verifier
+  - architecture_verifier

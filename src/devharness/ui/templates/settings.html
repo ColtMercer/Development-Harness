@@ -1,0 +1,85 @@
+{% extends "layout.html" %}
+{% block title %}Settings - Development Harness{% endblock %}
+
+{% block content %}
+<h1>Settings</h1>
+
+<p>All configuration is stored in the database. No config files needed.</p>
+
+{% if saved is defined %}
+<article>
+    <p>Settings saved successfully.</p>
+</article>
+{% endif %}
+
+<h2>Credentials</h2>
+<p>API keys and tokens are stored securely in the database (never in source code).</p>
+
+<form action="/settings/credentials" method="post">
+    <div class="grid">
+        <div>
+            <label for="cred_key">Credential</label>
+            <select id="cred_key" name="cred_key">
+                <option value="anthropic.api_key">Anthropic API Key (Claude Code)</option>
+                <option value="openai.api_key">OpenAI API Key (Codex)</option>
+                <option value="neo4j.password">Neo4j Password</option>
+                <option value="slack.app_token">Slack App Token</option>
+                <option value="slack.bot_token">Slack Bot Token</option>
+            </select>
+        </div>
+        <div>
+            <label for="cred_value">Value</label>
+            <input type="password" id="cred_value" name="value" placeholder="sk-..." required>
+        </div>
+    </div>
+    <button type="submit">Save Credential</button>
+</form>
+
+<h2>General Settings</h2>
+<p>Change any setting. The agent can also manage these via <code>harness config set</code>.</p>
+
+<form action="/settings/general" method="post">
+    <div class="grid">
+        <div>
+            <label for="setting_key">Setting</label>
+            <select id="setting_key" name="key">
+                <option value="server.host">Server Host</option>
+                <option value="server.port">Server Port</option>
+                <option value="default.approval_mode">Default Approval Mode</option>
+                <option value="default.agent_backend">Default Agent Backend</option>
+                <option value="default.memory_backend">Memory Backend</option>
+                <option value="log.level">Log Level</option>
+                <option value="neo4j.uri">Neo4j URI</option>
+                <option value="neo4j.enabled">Neo4j Enabled</option>
+                <option value="embedding.model">Embedding Model</option>
+            </select>
+        </div>
+        <div>
+            <label for="setting_value">Value</label>
+            <input type="text" id="setting_value" name="value" required>
+        </div>
+    </div>
+    <button type="submit">Save Setting</button>
+</form>
+
+<h2>Current Configuration</h2>
+<table>
+    <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+    <tbody>
+        <tr><td>Default Agent</td><td>{{ config.default_agent_backend }}</td></tr>
+        <tr><td>Default Approval Mode</td><td>{{ config.default_approval_mode }}</td></tr>
+        <tr><td>Memory Backend</td><td>{{ config.default_memory_backend }}</td></tr>
+        <tr><td>Server</td><td>{{ config.server_host }}:{{ config.server_port }}</td></tr>
+        <tr><td>Log Level</td><td>{{ config.log_level }}</td></tr>
+        <tr><td>Storage Dir</td><td>{{ config.storage_dir }}</td></tr>
+    </tbody>
+</table>
+
+<h2>CLI Reference</h2>
+<pre>
+harness config list                              # List all settings
+harness config set server.port 9000              # Change a setting
+harness config set-credential anthropic.api_key sk-...  # Store API key
+harness config get default.approval_mode         # Read a setting
+</pre>
+{% endblock %}

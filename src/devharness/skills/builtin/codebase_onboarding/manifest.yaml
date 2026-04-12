@@ -1,0 +1,9 @@
+name: codebase_onboarding
+version: "0.1.0"
+description: Guides the agent through learning a new codebase -- reading key files, understanding architecture, and producing an architecture summary.
+tools:
+  - file_read
+  - search
+  - shell
+  - diff_tool
+verifiers: []

@@ -1,0 +1,111 @@
+{% extends "layout.html" %}
+{% block title %}Thread {{ thread.id[:8] }} - Development Harness{% endblock %}
+
+{% block content %}
+<h1>Thread {{ thread.id[:8] }}...</h1>
+
+<div class="grid">
+    <article>
+        <header>Status</header>
+        <p><strong>{{ thread.status }}</strong></p>
+        <p>Backend: {{ thread.config.agent_backend }}</p>
+        <p>Approval: {{ thread.config.approval_mode }}</p>
+    </article>
+    <article>
+        <header>Timeline</header>
+        <p>Created: {{ thread.created_at.isoformat()[:19] }}</p>
+        <p>Updated: {{ thread.updated_at.isoformat()[:19] }}</p>
+        <p>Turns: {{ thread.turns|length }}</p>
+    </article>
+</div>
+
+{% if thread.pending_approval %}
+<article class="warning">
+    <header>Pending Approval</header>
+    <p><strong>Tool:</strong> {{ thread.pending_approval.tool_name }}</p>
+    <p><strong>Reason:</strong> {{ thread.pending_approval.reason }}</p>
+    <pre>{{ thread.pending_approval.arguments }}</pre>
+    <form action="/approvals/action" method="post">
+        <input type="hidden" name="thread_id" value="{{ thread.id }}">
+        <input type="hidden" name="approval_id" value="{{ thread.pending_approval.id }}">
+        <div class="grid">
+            <button type="submit" name="action" value="approve">Approve</button>
+            <button type="submit" name="action" value="deny" class="secondary">Deny</button>
+        </div>
+    </form>
+</article>
+{% endif %}
+
+<h2>Turns</h2>
+{% for turn in thread.turns %}
+<details {% if loop.last %}open{% endif %}>
+    <summary>
+        Turn {{ loop.index }}: {{ turn.user_input[:80] }}...
+        {% if turn.error %}<mark class="error">Error</mark>{% endif %}
+    </summary>
+    <article>
+        <p><strong>Input:</strong> {{ turn.user_input }}</p>
+        {% if turn.assistant_response %}
+        <p><strong>Response:</strong></p>
+        <pre>{{ turn.assistant_response[:2000] }}</pre>
+        {% endif %}
+        {% if turn.error %}
+        <p><strong>Error:</strong> <code>{{ turn.error }}</code></p>
+        {% endif %}
+        {% if turn.tool_calls %}
+        <p><strong>Tool Calls:</strong> {{ turn.tool_calls|length }}</p>
+        {% for tc in turn.tool_calls %}
+        <details>
+            <summary>{{ tc.tool_name }} [{{ tc.approval_status }}]</summary>
+            <pre>{{ tc.arguments }}</pre>
+            {% if tc.result %}
+            <pre>{{ tc.result.output[:1000] }}</pre>
+            {% endif %}
+        </details>
+        {% endfor %}
+        {% endif %}
+        {% if turn.verification %}
+        <p><strong>Verification:</strong>
+            {% if turn.verification.all_passed %}PASSED{% else %}FAILED{% endif %}
+        </p>
+        {% for r in turn.verification.results %}
+        <p>  {{ "PASS" if r.passed else "FAIL" }} {{ r.verifier_name }}: {{ r.message }}</p>
+        {% endfor %}
+        {% endif %}
+    </article>
+</details>
+{% endfor %}
+
+<h2>Events ({{ events|length }})</h2>
+<details>
+    <summary>Show event log</summary>
+    <table>
+        <thead><tr><th>Time</th><th>Kind</th><th>Data</th></tr></thead>
+        <tbody>
+            {% for event in events[-50:] %}
+            <tr>
+                <td>{{ event.timestamp.isoformat()[:19] }}</td>
+                <td><code>{{ event.kind }}</code></td>
+                <td><small>{{ event.data }}</small></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</details>
+
+{% if artifacts %}
+<h2>Artifacts ({{ artifacts|length }})</h2>
+<table>
+    <thead><tr><th>Name</th><th>Kind</th><th>Created</th></tr></thead>
+    <tbody>
+        {% for art in artifacts %}
+        <tr>
+            <td>{{ art.name }}</td>
+            <td>{{ art.kind }}</td>
+            <td>{{ art.created_at.isoformat()[:19] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

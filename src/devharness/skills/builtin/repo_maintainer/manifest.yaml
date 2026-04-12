@@ -1,0 +1,16 @@
+name: repo_maintainer
+version: "0.1.0"
+description: Repository maintenance skill for dependency updates, CI configuration, and project health.
+tools:
+  - file_read
+  - file_write
+  - search
+  - shell
+  - git_status
+  - lint_runner
+  - test_runner
+verifiers:
+  - lint_verifier
+  - format_verifier
+  - schema_verifier
+  - file_existence_verifier

@@ -1,0 +1,12 @@
+name: sre_investigator
+version: "0.1.0"
+description: SRE investigation skill for diagnosing production issues, analyzing logs, and triaging incidents.
+tools:
+  - file_read
+  - search
+  - shell
+  - git_status
+  - diff_tool
+verifiers:
+  - test_verifier
+  - file_existence_verifier

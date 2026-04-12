@@ -1,0 +1,16 @@
+name: coding_general
+version: "0.1.0"
+description: General-purpose coding skill for implementing features, fixing bugs, and refactoring code.
+tools:
+  - file_read
+  - file_write
+  - search
+  - shell
+  - git_status
+  - diff_tool
+  - test_runner
+  - lint_runner
+verifiers:
+  - test_verifier
+  - lint_verifier
+  - format_verifier

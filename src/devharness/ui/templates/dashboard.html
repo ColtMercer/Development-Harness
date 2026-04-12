@@ -1,0 +1,59 @@
+{% extends "layout.html" %}
+{% block title %}Dashboard - Development Harness{% endblock %}
+
+{% block content %}
+<h1>Dashboard</h1>
+
+<div class="grid">
+    <article>
+        <header>Threads</header>
+        <p><strong>{{ threads|length }}</strong> total</p>
+        <p>{{ threads|selectattr('status', 'equalto', 'running')|list|length }} running</p>
+        <p>{{ threads|selectattr('status', 'equalto', 'paused')|list|length }} paused</p>
+    </article>
+    <article>
+        <header>Projects</header>
+        <p><strong>{{ projects|length }}</strong> configured</p>
+    </article>
+</div>
+
+<h2>Recent Threads</h2>
+{% if threads %}
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Status</th>
+            <th>Turns</th>
+            <th>Created</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for thread in threads[:20] %}
+        <tr>
+            <td><a href="/threads/{{ thread.id }}">{{ thread.id[:8] }}...</a></td>
+            <td>
+                {% if thread.status == 'running' %}
+                    <mark>{{ thread.status }}</mark>
+                {% elif thread.status == 'paused' %}
+                    <mark class="warning">{{ thread.status }}</mark>
+                {% elif thread.status == 'failed' %}
+                    <mark class="error">{{ thread.status }}</mark>
+                {% else %}
+                    {{ thread.status }}
+                {% endif %}
+            </td>
+            <td>{{ thread.turns|length }}</td>
+            <td>{{ thread.created_at.isoformat()[:19] }}</td>
+            <td>
+                <a href="/threads/{{ thread.id }}" role="button" class="outline small">View</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No threads yet. Run <code>harness run "your prompt"</code> to create one.</p>
+{% endif %}
+{% endblock %}
