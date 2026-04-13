@@ -33,6 +33,9 @@ def create_ui_routes(runtime: Runtime, config: HarnessConfig) -> list:
         template = env.get_template(template_name)
         return HTMLResponse(template.render(**context))
 
+    # Track running tasks so we don't block the request
+    _running_threads: dict[str, str] = {}  # thread_id -> prompt
+
     async def dashboard(request: Request) -> Response:
         threads = await runtime.list_threads()
         projects = await runtime._storage.list_projects()
@@ -42,6 +45,90 @@ def create_ui_routes(runtime: Runtime, config: HarnessConfig) -> list:
             projects=projects,
             config=config,
         )
+
+    async def new_thread_page(request: Request) -> Response:
+        skill_names = [s.name for s in runtime._skills.list_skills()]
+        return render("new_thread.html", config=config, available_skills=skill_names)
+
+    async def create_thread(request: Request) -> Response:
+        from starlette.responses import RedirectResponse
+        from devharness.core.models import ThreadConfig
+        import anyio
+
+        form = await request.form()
+        prompt = form.get("prompt", "").strip()
+        if not prompt:
+            return RedirectResponse("/threads/new", status_code=303)
+
+        agent = form.get("agent_backend", config.default_agent_backend)
+        approval = form.get("approval_mode", config.default_approval_mode)
+        skills_str = form.get("skills", "")
+        skills = [s.strip() for s in skills_str.split(",") if s.strip()] if skills_str else []
+        workspace = form.get("workspace_root", ".")
+        verification = form.get("verification_enabled") == "true"
+
+        thread_config = ThreadConfig(
+            agent_backend=agent,
+            approval_mode=approval,
+            skills=skills,
+            workspace_root=workspace,
+            verification_enabled=verification,
+        )
+        thread = await runtime.create_thread(thread_config)
+        _running_threads[thread.id] = prompt
+
+        # Run the turn in background so we don't block the redirect
+        async def _run_in_background() -> None:
+            try:
+                await runtime.run_turn(thread.id, prompt)
+            except Exception as e:
+                logger.error("Thread %s failed: %s", thread.id, e)
+            finally:
+                _running_threads.pop(thread.id, None)
+
+        # Fire and forget using anyio
+        from anyio import create_task_group, sleep
+
+        # We can't fire-and-forget with structured concurrency, so we
+        # start the task and redirect immediately. The task runs to completion
+        # on its own. For a production system we'd use a proper task queue.
+        import asyncio
+        asyncio.get_event_loop().create_task(_run_in_background())
+
+        return RedirectResponse(f"/threads/{thread.id}/live", status_code=303)
+
+    async def thread_live(request: Request) -> Response:
+        thread_id = request.path_params["thread_id"]
+        thread = await runtime.get_thread(thread_id)
+        events = await runtime._storage.load_events(thread_id)
+        prompt = _running_threads.get(thread_id, "")
+        if not prompt and thread.turns:
+            prompt = thread.turns[0].user_input
+        return render(
+            "thread_running.html",
+            thread=thread,
+            events=events,
+            prompt=prompt,
+            config=config,
+        )
+
+    async def thread_status_fragment(request: Request) -> Response:
+        """HTMX polling endpoint -- returns just the status fragment."""
+        thread_id = request.path_params["thread_id"]
+        thread = await runtime.get_thread(thread_id)
+        events = await runtime._storage.load_events(thread_id)
+
+        if thread.status.value == "running":
+            return HTMLResponse(
+                f'<div hx-get="/threads/{thread_id}/status" hx-trigger="every 3s" hx-swap="outerHTML">'
+                f'<article aria-busy="true"><p>Agent is working...</p>'
+                f'<p><small>Events so far: {len(events)}</small></p></article></div>'
+            )
+        else:
+            # Done -- redirect to the full page to show final results
+            return HTMLResponse(
+                f'<script>window.location.href="/threads/{thread_id}/live";</script>'
+            )
 
     async def thread_detail(request: Request) -> Response:
         thread_id = request.path_params["thread_id"]
@@ -129,6 +216,10 @@ def create_ui_routes(runtime: Runtime, config: HarnessConfig) -> list:
 
     routes = [
         Route("/", dashboard),
+        Route("/threads/new", new_thread_page, methods=["GET"]),
+        Route("/threads/new", create_thread, methods=["POST"]),
+        Route("/threads/{thread_id}/live", thread_live),
+        Route("/threads/{thread_id}/status", thread_status_fragment),
         Route("/threads/{thread_id}", thread_detail),
         Route("/approvals", approvals_page),
         Route("/approvals/action", approve_action, methods=["POST"]),

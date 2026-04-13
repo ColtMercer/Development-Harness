@@ -65,6 +65,9 @@ def serve(ctx: click.Context, host: str | None, port: int | None) -> None:
 
     async def _serve() -> None:
         from devharness.bootstrap import bootstrap, shutdown
+        import logging as _logging
+        # Suppress noisy aiosqlite debug logs during serve
+        _logging.getLogger("aiosqlite").setLevel(_logging.WARNING)
 
         runtime = await bootstrap(config)
         click.echo(f"Harness server starting on http://{config.server_host}:{config.server_port}")

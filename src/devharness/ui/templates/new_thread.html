@@ -1,0 +1,70 @@
+{% extends "layout.html" %}
+{% block title %}New Thread - Development Harness{% endblock %}
+
+{% block content %}
+<h1>New Thread</h1>
+
+<form action="/threads/new" method="post">
+
+    <label>
+        What do you want to build?
+        <textarea name="prompt" rows="6" placeholder="Describe what you want the agent to do...
+
+Examples:
+  - Add user authentication with JWT tokens
+  - Fix the failing tests in src/auth/
+  - Refactor the database module to use async
+  - Build a REST API for the todo list feature
+  - Write tests for the payment processing module" required autofocus></textarea>
+    </label>
+
+    <div class="grid">
+        <label>
+            Agent
+            <select name="agent_backend">
+                <option value="claude-code" {% if config.default_agent_backend == 'claude-code' %}selected{% endif %}>Claude Code</option>
+                <option value="codex" {% if config.default_agent_backend == 'codex' %}selected{% endif %}>Codex</option>
+            </select>
+        </label>
+
+        <label>
+            Approval Mode
+            <select name="approval_mode">
+                {% for val, desc in [
+                    ("full_trust", "Full Trust"),
+                    ("auto_approve_safe", "Auto Approve Safe"),
+                    ("workspace_write", "Workspace Write"),
+                    ("approval_required", "Approval Required"),
+                    ("read_only", "Read Only"),
+                ] %}
+                <option value="{{ val }}" {% if config.default_approval_mode == val %}selected{% endif %}>{{ desc }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </div>
+
+    <details>
+        <summary>Advanced Options</summary>
+
+        <label>
+            Skills (comma-separated)
+            <input type="text" name="skills" placeholder="coding/general, test/fixer" value="">
+            <small>Available: {{ available_skills | join(', ') }}</small>
+        </label>
+
+        <label>
+            Workspace Root
+            <input type="text" name="workspace_root" value="." placeholder=".">
+        </label>
+
+        <div class="grid">
+            <label>
+                <input type="checkbox" name="verification_enabled" value="true" checked>
+                Run verification after agent completes
+            </label>
+        </div>
+    </details>
+
+    <button type="submit">Run</button>
+</form>
+{% endblock %}

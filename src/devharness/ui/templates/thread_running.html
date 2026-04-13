@@ -1,0 +1,120 @@
+{% extends "layout.html" %}
+{% block title %}Thread {{ thread.id[:8] }}... running - Development Harness{% endblock %}
+
+{% block content %}
+<h1>Thread {{ thread.id[:8] }}...</h1>
+
+<article>
+    <header>
+        {% if thread.status.value == 'running' %}
+            <span aria-busy="true">Running</span> — {{ thread.config.agent_backend }}
+        {% elif thread.status.value == 'completed' %}
+            Completed
+        {% elif thread.status.value == 'failed' %}
+            <mark class="error">Failed</mark>
+        {% elif thread.status.value == 'paused' %}
+            <mark class="warning">Paused — waiting for approval</mark>
+        {% else %}
+            {{ thread.status }}
+        {% endif %}
+    </header>
+
+    <p><strong>Prompt:</strong> {{ prompt }}</p>
+    <p><strong>Agent:</strong> {{ thread.config.agent_backend }} | <strong>Approval:</strong> {{ thread.config.approval_mode }}</p>
+</article>
+
+{% if thread.status.value == 'running' %}
+<!-- Poll for updates while running -->
+<div hx-get="/threads/{{ thread.id }}/status" hx-trigger="every 3s" hx-swap="outerHTML">
+    <article aria-busy="true">
+        <p>Agent is working...</p>
+        <p><small>Events so far: {{ events | length }}</small></p>
+    </article>
+</div>
+{% endif %}
+
+{% if thread.status.value == 'paused' and thread.pending_approval %}
+<article style="border-left: 4px solid var(--pico-primary);">
+    <header>Approval Required</header>
+    <p><strong>Tool:</strong> {{ thread.pending_approval.tool_name }}</p>
+    <p><strong>Reason:</strong> {{ thread.pending_approval.reason }}</p>
+    <details>
+        <summary>Arguments</summary>
+        <pre>{{ thread.pending_approval.arguments }}</pre>
+    </details>
+    <form action="/approvals/action" method="post">
+        <input type="hidden" name="thread_id" value="{{ thread.id }}">
+        <input type="hidden" name="approval_id" value="{{ thread.pending_approval.id }}">
+        <div class="grid">
+            <button type="submit" name="action" value="approve">Approve</button>
+            <button type="submit" name="action" value="deny" class="secondary">Deny</button>
+        </div>
+    </form>
+</article>
+{% endif %}
+
+{% for turn in thread.turns %}
+<article>
+    <header>Turn {{ loop.index }}</header>
+    <p><strong>Input:</strong> {{ turn.user_input[:200] }}{% if turn.user_input|length > 200 %}...{% endif %}</p>
+
+    {% if turn.assistant_response %}
+    <details open>
+        <summary>Agent Response</summary>
+        <pre style="white-space: pre-wrap;">{{ turn.assistant_response }}</pre>
+    </details>
+    {% endif %}
+
+    {% if turn.error %}
+    <p><mark class="error">Error:</mark> {{ turn.error }}</p>
+    {% endif %}
+
+    {% if turn.tool_calls %}
+    <details>
+        <summary>{{ turn.tool_calls|length }} tool call(s)</summary>
+        {% for tc in turn.tool_calls %}
+        <p><code>{{ tc.tool_name }}</code> [{{ tc.approval_status }}]</p>
+        {% endfor %}
+    </details>
+    {% endif %}
+
+    {% if turn.verification %}
+    <p>
+        <strong>Verification:</strong>
+        {% if turn.verification.all_passed %}
+            <mark class="success">PASSED</mark>
+        {% else %}
+            <mark class="error">FAILED</mark>
+        {% endif %}
+    </p>
+    {% for r in turn.verification.results %}
+    <small>{{ "PASS" if r.passed else "FAIL" }} {{ r.verifier_name }}: {{ r.message }}</small><br>
+    {% endfor %}
+    {% endif %}
+</article>
+{% endfor %}
+
+{% if events %}
+<details>
+    <summary>Event Log ({{ events | length }})</summary>
+    <table>
+        <thead><tr><th>Time</th><th>Event</th></tr></thead>
+        <tbody>
+            {% for event in events[-30:] %}
+            <tr>
+                <td><small>{{ event.timestamp.isoformat()[:19] }}</small></td>
+                <td><code>{{ event.kind }}</code></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</details>
+{% endif %}
+
+{% if thread.status.value in ('completed', 'failed', 'cancelled') %}
+<div class="grid">
+    <a href="/threads/new" role="button">New Thread</a>
+    <a href="/" role="button" class="secondary">Dashboard</a>
+</div>
+{% endif %}
+{% endblock %}

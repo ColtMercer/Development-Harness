@@ -2,7 +2,10 @@
 {% block title %}Dashboard - Development Harness{% endblock %}
 
 {% block content %}
-<h1>Dashboard</h1>
+<div style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>Dashboard</h1>
+    <a href="/threads/new" role="button">New Thread</a>
+</div>
 
 <div class="grid">
     <article>
@@ -24,36 +27,51 @@
         <tr>
             <th>ID</th>
             <th>Status</th>
+            <th>Prompt</th>
             <th>Turns</th>
             <th>Created</th>
-            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
         {% for thread in threads[:20] %}
         <tr>
-            <td><a href="/threads/{{ thread.id }}">{{ thread.id[:8] }}...</a></td>
             <td>
-                {% if thread.status == 'running' %}
-                    <mark>{{ thread.status }}</mark>
-                {% elif thread.status == 'paused' %}
-                    <mark class="warning">{{ thread.status }}</mark>
-                {% elif thread.status == 'failed' %}
-                    <mark class="error">{{ thread.status }}</mark>
+                {% if thread.status.value == 'running' %}
+                <a href="/threads/{{ thread.id }}/live">{{ thread.id[:8] }}...</a>
+                {% else %}
+                <a href="/threads/{{ thread.id }}">{{ thread.id[:8] }}...</a>
+                {% endif %}
+            </td>
+            <td>
+                {% if thread.status.value == 'running' %}
+                    <mark>running</mark>
+                {% elif thread.status.value == 'paused' %}
+                    <mark class="warning">paused</mark>
+                {% elif thread.status.value == 'failed' %}
+                    <mark class="error">failed</mark>
+                {% elif thread.status.value == 'completed' %}
+                    <mark class="success">done</mark>
                 {% else %}
                     {{ thread.status }}
                 {% endif %}
             </td>
-            <td>{{ thread.turns|length }}</td>
-            <td>{{ thread.created_at.isoformat()[:19] }}</td>
             <td>
-                <a href="/threads/{{ thread.id }}" role="button" class="outline small">View</a>
+                {% if thread.turns %}
+                    {{ thread.turns[0].user_input[:60] }}{% if thread.turns[0].user_input|length > 60 %}...{% endif %}
+                {% else %}
+                    <small>—</small>
+                {% endif %}
             </td>
+            <td>{{ thread.turns|length }}</td>
+            <td><small>{{ thread.created_at.isoformat()[:16] }}</small></td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
 {% else %}
-<p>No threads yet. Run <code>harness run "your prompt"</code> to create one.</p>
+<article>
+    <p>No threads yet.</p>
+    <a href="/threads/new" role="button">Create your first thread</a>
+</article>
 {% endif %}
 {% endblock %}
