@@ -101,12 +101,14 @@ SETTINGS_KEYS: dict[str, dict[str, Any]] = {
 }
 
 # Credential keys (stored in credentials table, not settings)
+# NOTE: Claude Code and Codex manage their own API keys/auth.
+# The harness does NOT need LLM API keys -- it spawns agents as subprocesses.
+# These credentials are only for harness integrations (Slack, Neo4j, embeddings).
 CREDENTIAL_KEYS: dict[str, dict[str, str]] = {
-    "anthropic.api_key": {"provider": "anthropic", "key_name": "api_key", "description": "Anthropic API key (for Claude Code)"},
-    "openai.api_key": {"provider": "openai", "key_name": "api_key", "description": "OpenAI API key (for Codex)"},
     "neo4j.password": {"provider": "neo4j", "key_name": "password", "description": "Neo4j password"},
     "slack.app_token": {"provider": "slack", "key_name": "app_token", "description": "Slack app token (xapp-...)"},
     "slack.bot_token": {"provider": "slack", "key_name": "bot_token", "description": "Slack bot token (xoxb-...)"},
+    "embedding.api_key": {"provider": "embedding", "key_name": "api_key", "description": "API key for embedding model (only needed for memory vector search)"},
 }
 
 
@@ -150,16 +152,9 @@ async def load_config_from_db(config: HarnessConfig, storage: Any) -> HarnessCon
             except (ValueError, TypeError):
                 logger.warning("Invalid DB setting %s=%s, using default", key, value)
 
-    # Load API keys from credentials table
-    for cred_key, cred_meta in CREDENTIAL_KEYS.items():
-        if cred_key == "anthropic.api_key":
-            value = await storage.load_credential(None, cred_meta["provider"], cred_meta["key_name"])
-            if value:
-                os.environ.setdefault("ANTHROPIC_API_KEY", value)
-        elif cred_key == "openai.api_key":
-            value = await storage.load_credential(None, cred_meta["provider"], cred_meta["key_name"])
-            if value:
-                os.environ.setdefault("OPENAI_API_KEY", value)
+    # NOTE: No LLM API keys to load here. Claude Code and Codex manage their
+    # own authentication. The harness spawns them as subprocesses -- it never
+    # calls LLM APIs directly.
 
     if updates:
         config = config.model_copy(update=updates)

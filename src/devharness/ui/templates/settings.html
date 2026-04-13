@@ -65,29 +65,8 @@
 </div>
 
 <!-- ─── Credentials ────────────────────────────────────────── -->
-<h2>Credentials</h2>
-<p><small>Stored securely in the database. Leave blank to keep existing value.</small></p>
-
-<div class="grid">
-    <label>
-        Anthropic API Key
-        {% if cred_status.get("anthropic.api_key") %}
-        <input type="password" name="anthropic.api_key" placeholder="••••••••  (set)" value="">
-        {% else %}
-        <input type="password" name="anthropic.api_key" placeholder="sk-ant-..." value="">
-        {% endif %}
-        <small>{% if cred_status.get("anthropic.api_key") %}Configured{% else %}Not set{% endif %}</small>
-    </label>
-    <label>
-        OpenAI API Key
-        {% if cred_status.get("openai.api_key") %}
-        <input type="password" name="openai.api_key" placeholder="••••••••  (set)" value="">
-        {% else %}
-        <input type="password" name="openai.api_key" placeholder="sk-..." value="">
-        {% endif %}
-        <small>{% if cred_status.get("openai.api_key") %}Configured{% else %}Not set{% endif %}</small>
-    </label>
-</div>
+<h2>Integrations</h2>
+<p><small>Claude Code and Codex manage their own API keys. These credentials are only for harness integrations. Leave blank to keep existing value.</small></p>
 
 <div class="grid">
     <label>
@@ -97,7 +76,7 @@
         {% else %}
         <input type="password" name="slack.app_token" placeholder="xapp-..." value="">
         {% endif %}
-        <small>{% if cred_status.get("slack.app_token") %}Configured{% else %}Not set{% endif %}</small>
+        <small>{% if cred_status.get("slack.app_token") %}Configured{% else %}Not set — needed for Slack integration{% endif %}</small>
     </label>
     <label>
         Slack Bot Token
@@ -106,9 +85,19 @@
         {% else %}
         <input type="password" name="slack.bot_token" placeholder="xoxb-..." value="">
         {% endif %}
-        <small>{% if cred_status.get("slack.bot_token") %}Configured{% else %}Not set{% endif %}</small>
+        <small>{% if cred_status.get("slack.bot_token") %}Configured{% else %}Not set — needed for Slack integration{% endif %}</small>
     </label>
 </div>
+
+<label>
+    Embedding API Key
+    {% if cred_status.get("embedding.api_key") %}
+    <input type="password" name="embedding.api_key" placeholder="••••••••  (set)" value="">
+    {% else %}
+    <input type="password" name="embedding.api_key" placeholder="sk-..." value="">
+    {% endif %}
+    <small>{% if cred_status.get("embedding.api_key") %}Configured{% else %}Not set — only needed for memory vector search{% endif %}</small>
+</label>
 
 <!-- ─── Memory ─────────────────────────────────────────────── -->
 <h2>Memory</h2>

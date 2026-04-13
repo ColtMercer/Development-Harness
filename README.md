@@ -285,18 +285,21 @@ A lightweight dashboard built with Starlette + HTMX + Pico CSS. No JavaScript bu
 | **Approvals** | Pending approval cards with approve/deny buttons |
 | **Observe** | Process status, test results, endpoint health, error feed |
 | **Skills** | Browse available skills and their manifests |
-| **Settings** | Configure everything -- API keys, approval modes, observers |
+| **Settings** | Configure everything -- approval modes, integrations, memory |
 
 ### DB-First Configuration
 
-No YAML config files. No `.env` files with 12 variables. No API keys in source code.
+No YAML config files. No `.env` files. No API keys in source code.
+
+Claude Code and Codex manage their own authentication -- the harness never touches LLM API keys. The only credentials the harness stores are for its own integrations (Slack, Neo4j, embedding model).
 
 The only environment variable is `DEVHARNESS_STORAGE_DIR` (default: `.devharness`). Everything else lives in the SQLite database, configurable from the CLI, web UI, or by the agent itself:
 
 ```bash
 harness config list                                    # see all settings
 harness config set server.port 9000                    # change a setting
-harness config set-credential anthropic.api_key sk-... # store API key
+harness config set default.approval_mode full_trust    # change default mode
+harness config set-credential slack.bot_token xoxb-... # store Slack token
 harness config get default.approval_mode               # read a setting
 ```
 
@@ -336,15 +339,9 @@ cd your-project
 harness init                    # scans codebase, generates config
 ```
 
-### Store your API key
-
-```bash
-harness config set-credential anthropic.api_key sk-ant-...
-# or
-harness config set-credential openai.api_key sk-...
-```
-
 ### Run your first task
+
+No API keys needed -- Claude Code and Codex handle their own auth.
 
 ```bash
 harness run "fix the failing tests"

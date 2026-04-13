@@ -131,10 +131,10 @@ class TestDbConfig:
     @pytest.mark.asyncio
     async def test_save_credential(self, tmp_storage) -> None:
         """Credentials are stored via save_config_to_db."""
-        await save_config_to_db("anthropic.api_key", "sk-test-123", tmp_storage)
+        await save_config_to_db("slack.bot_token", "xoxb-test-123", tmp_storage)
 
-        cred = await tmp_storage.load_credential(None, "anthropic", "api_key")
-        assert cred == "sk-test-123"
+        cred = await tmp_storage.load_credential(None, "slack", "bot_token")
+        assert cred == "xoxb-test-123"
 
     @pytest.mark.asyncio
     async def test_save_invalid_key_raises(self, tmp_storage) -> None:
@@ -166,7 +166,7 @@ class TestConfigKeys:
         keys = list_config_keys()
         key_names = {k["key"] for k in keys}
         assert "server.port" in key_names
-        assert "anthropic.api_key" in key_names
+        assert "slack.bot_token" in key_names
 
     def test_all_settings_keys_have_field(self) -> None:
         for key, meta in SETTINGS_KEYS.items():
